@@ -12,7 +12,7 @@ const app = express();
 app.use(
   // FOR DEMO PURPOSES ONLY
   // Use an actual secret key in production
-  session({ secret: "bosco", saveUninitialized: true, resave: true })
+  session({ secret: "38bb8c6e0b3e05a324389092f9c783", saveUninitialized: true, resave: true })
 );
 
 app.use(bodyParser.urlencoded({ extended: false }));
