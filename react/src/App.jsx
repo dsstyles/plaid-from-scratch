@@ -64,11 +64,11 @@ function App(props) {
       open();
     }
   }, [token, isOauth, ready, open]);
-  
+
   return (
     <div>
       <button onClick={() => open()
-        } disabled={!ready}>
+      } disabled={!ready}>
         <strong>Link account</strong>
       </button>
 
@@ -79,7 +79,7 @@ function App(props) {
             <code>{JSON.stringify(entry[1], null, 2)}</code>
           </pre>
         )
-      )}
+        )}
     </div>
   );
 }
