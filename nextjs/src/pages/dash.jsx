@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { withIronSessionSsr } from 'iron-session/next';
 import { plaidClient, sessionOptions } from '../lib/plaid';
 
-export default function Dashboard({ balance, identity, investments, transactions, error, isTransactionsPending }) {
+export default function Dashboard({ balance, identity, investments, transactions, error, incomeVerification, isTransactionsPending }) {
   const [analysis, setAnalysis] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [incomeVerificationData, setIncomeVerificationData] = useState(incomeVerification);
 
   const handleAnalyzeData = async () => {
     setIsLoading(true);
@@ -30,6 +31,24 @@ export default function Dashboard({ balance, identity, investments, transactions
       setIsLoading(false);
     }
   };
+
+  const handleIncomeVerification = async () => {
+    console.log('Initiating income verification');
+    try {
+      const response = await fetch('/api/income-verification', {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch income verification');
+      }
+      const data = await response.json();
+      console.log('Income verification data received:', data);
+      setIncomeVerificationData(data);
+    } catch (error) {
+      console.error('Error fetching income verification:', error);
+    }
+  };
+  
 
   if (error) {
     return <div>Error: {error}</div>;
@@ -67,16 +86,21 @@ export default function Dashboard({ balance, identity, investments, transactions
         ))}
       </section>
 
-      {investments && (
+      {investments && investments.holdings && (
         <section>
           <h2>Investment Holdings</h2>
-          {investments.holdings.map((holding, i) => (
-            <div key={`holding-${i}`}>
-              <p>Security: {holding.security.name}</p>
-              <p>Quantity: {holding.quantity}</p>
-              <p>Current Value: ${holding.institution_value}</p>
-            </div>
-          ))}
+          {investments.holdings.map((holding, i) => {
+            const security = investments.securities.find(s => s.security_id === holding.security_id);
+            return (
+              <div key={`holding-${i}`}>
+                <p>Security: {security ? security.name : 'Unknown'}</p>
+                <p>Ticker: {security ? security.ticker_symbol : 'N/A'}</p>
+                <p>Quantity: {holding.quantity}</p>
+                <p>Current Value: ${holding.institution_value.toFixed(2)}</p>
+                <p>Price: ${holding.institution_price.toFixed(2)}</p>
+              </div>
+            );
+          })}
         </section>
       )}
 
@@ -95,6 +119,24 @@ export default function Dashboard({ balance, identity, investments, transactions
           ))
         )}
       </section>
+
+      <button onClick={handleIncomeVerification}>
+        Verify Income
+      </button>
+
+      {incomeVerificationData && incomeVerificationData.paystubs && (
+        <section>
+          <h2>Income Verification</h2>
+          {incomeVerificationData.paystubs.map((paystub, index) => (
+            <div key={`paystub-${index}`}>
+              <h3>Paystub {index + 1}</h3>
+              <p>Employer: {paystub.employer.name}</p>
+              {/* Rest of your paystub rendering code */}
+            </div>
+          ))}
+        </section>
+      )}
+
 
       <button onClick={handleAnalyzeData} disabled={isLoading}>
         {isLoading ? 'Analyzing...' : 'Analyze Data for Mortgage Application'}
@@ -124,10 +166,13 @@ export const getServerSideProps = withIronSessionSsr(
     }
 
     try {
-      const [balanceResponse, identityResponse] = await Promise.all([
+      const [balanceResponse, identityResponse, incomeVerificationResponse] = await Promise.all([
         plaidClient.accountsBalanceGet({ access_token }),
         plaidClient.identityGet({ access_token }),
+        plaidClient.incomeVerificationPaystubsGet({ access_token }).catch(e => null)
       ]);
+
+      console.log('Income Verification Data:', incomeVerificationResponse?.data);
 
       let investmentsResponse = null;
       try {
@@ -136,7 +181,6 @@ export const getServerSideProps = withIronSessionSsr(
         if (investmentError.response?.data?.error_code !== 'NO_INVESTMENT_ACCOUNTS') {
           console.error('Error fetching investment data:', investmentError);
         }
-        // If it is NO_INVESTMENT_ACCOUNTS, we just leave investmentsResponse as null
       }
 
       let transactionsResponse = null;
@@ -152,17 +196,18 @@ export const getServerSideProps = withIronSessionSsr(
           console.log('Transactions not ready yet');
           isTransactionsPending = true;
         } else {
-          throw transactionError;  // Re-throw if it's not the PRODUCT_NOT_READY error
+          throw transactionError;
         }
       }
 
       return {
         props: {
-          balance: balanceResponse.data,
-          identity: identityResponse.data,
+          balance: balanceResponse.data || null,
+          identity: identityResponse.data || null,
           investments: investmentsResponse?.data || null,
           transactions: transactionsResponse?.data || null,
           isTransactionsPending,
+          incomeVerification: incomeVerificationResponse?.data || null,
         },
       };
     } catch (error) {
