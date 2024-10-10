@@ -56,7 +56,7 @@ export default function Dashboard({ balance, identity, investments, transactions
 
   return (
     <div>
-      <h1>Financial Dashboard</h1>
+      {/* <h1>Financial Dashboard</h1>
       
       <section>
         <h2>Account Balances</h2>
@@ -122,7 +122,7 @@ export default function Dashboard({ balance, identity, investments, transactions
 
       <button onClick={handleIncomeVerification}>
         Verify Income
-      </button>
+      </button> */}
 
       {incomeVerificationData && incomeVerificationData.paystubs && (
         <section>
@@ -130,8 +130,22 @@ export default function Dashboard({ balance, identity, investments, transactions
           {incomeVerificationData.paystubs.map((paystub, index) => (
             <div key={`paystub-${index}`}>
               <h3>Paystub {index + 1}</h3>
-              <p>Employer: {paystub.employer.name}</p>
-              {/* Rest of your paystub rendering code */}
+              <p>Employer: {paystub.employer.name || 'N/A'}</p>
+              <p>Employee: {paystub.employee.name || 'N/A'}</p>
+              <p>Pay Period: {paystub.pay_period_details.start_date} to {paystub.pay_period_details.end_date}</p>
+              <p>Net Pay: ${paystub.net_pay.current_amount}</p>
+              <h4>Earnings</h4>
+              <ul>
+                {paystub.earnings.breakdown.map((earning, i) => (
+                  <li key={i}>{earning.canonical_description}: ${earning.current_amount}</li>
+                ))}
+              </ul>
+              <h4>Deductions</h4>
+              <ul>
+                {paystub.deductions.breakdown.map((deduction, i) => (
+                  <li key={i}>{deduction.type}: ${deduction.current_amount}</li>
+                ))}
+              </ul>
             </div>
           ))}
         </section>
@@ -166,48 +180,13 @@ export const getServerSideProps = withIronSessionSsr(
     }
 
     try {
-      const [balanceResponse, identityResponse, incomeVerificationResponse] = await Promise.all([
-        plaidClient.accountsBalanceGet({ access_token }),
-        plaidClient.identityGet({ access_token }),
-        plaidClient.incomeVerificationPaystubsGet({ access_token }).catch(e => null)
-      ]);
+      const incomeVerificationResponse = await plaidClient.incomeVerificationPaystubsGet({ access_token });
 
-      console.log('Income Verification Data:', incomeVerificationResponse?.data);
-
-      let investmentsResponse = null;
-      try {
-        investmentsResponse = await plaidClient.investmentsHoldingsGet({ access_token });
-      } catch (investmentError) {
-        if (investmentError.response?.data?.error_code !== 'NO_INVESTMENT_ACCOUNTS') {
-          console.error('Error fetching investment data:', investmentError);
-        }
-      }
-
-      let transactionsResponse = null;
-      let isTransactionsPending = false;
-      try {
-        transactionsResponse = await plaidClient.transactionsGet({
-          access_token,
-          start_date: '2023-01-01',
-          end_date: '2023-12-31',
-        });
-      } catch (transactionError) {
-        if (transactionError.response?.data?.error_code === 'PRODUCT_NOT_READY') {
-          console.log('Transactions not ready yet');
-          isTransactionsPending = true;
-        } else {
-          throw transactionError;
-        }
-      }
+      console.log('Income Verification Data:', incomeVerificationResponse.data);
 
       return {
         props: {
-          balance: balanceResponse.data || null,
-          identity: identityResponse.data || null,
-          investments: investmentsResponse?.data || null,
-          transactions: transactionsResponse?.data || null,
-          isTransactionsPending,
-          incomeVerification: incomeVerificationResponse?.data || null,
+          incomeVerification: incomeVerificationResponse.data || null,
         },
       };
     } catch (error) {
