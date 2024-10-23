@@ -15,7 +15,7 @@ export default function Dashboard({ balance, identity, investments, transactions
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ balance, identity, investments, transactions }),
+        body: JSON.stringify({ balance, identity, investments, transactions, incomeVerificationData }),
       });
       
       if (!response.ok) {
@@ -56,7 +56,7 @@ export default function Dashboard({ balance, identity, investments, transactions
 
   return (
     <div>
-      {/* <h1>Financial Dashboard</h1>
+      <h1>Financial Dashboard</h1>
       
       <section>
         <h2>Account Balances</h2>
@@ -122,7 +122,7 @@ export default function Dashboard({ balance, identity, investments, transactions
 
       <button onClick={handleIncomeVerification}>
         Verify Income
-      </button> */}
+      </button> 
 
       {incomeVerificationData && incomeVerificationData.paystubs && (
         <section>
@@ -169,8 +169,11 @@ export default function Dashboard({ balance, identity, investments, transactions
 export const getServerSideProps = withIronSessionSsr(
   async function getServerSideProps({ req }) {
     const access_token = req.session.access_token;
+    const payroll_access_token = req.session.payroll_access_token;
 
-    if (!access_token) {
+    if (!access_token || !payroll_access_token) {
+      console.log('Missing access token or payroll access token');
+      console.log(access_token, payroll_access_token);
       return {
         redirect: {
           destination: '/',
@@ -180,13 +183,28 @@ export const getServerSideProps = withIronSessionSsr(
     }
 
     try {
-      const incomeVerificationResponse = await plaidClient.incomeVerificationPaystubsGet({ access_token });
+      const today = new Date();
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
 
-      console.log('Income Verification Data:', incomeVerificationResponse.data);
-
+      const [balanceResponse, identityResponse, investmentsResponse, transactionsResponse, incomeVerificationResponse] = await Promise.all([
+        plaidClient.accountsBalanceGet({ access_token }),
+        plaidClient.identityGet({ access_token }),
+        plaidClient.investmentsHoldingsGet({ access_token }),
+        plaidClient.transactionsGet({ 
+          access_token, 
+          start_date: thirtyDaysAgo.toISOString().split('T')[0],  // Format: YYYY-MM-DD
+          end_date: today.toISOString().split('T')[0]             // Format: YYYY-MM-DD
+        }),
+        plaidClient.incomeVerificationPaystubsGet({ access_token: payroll_access_token })
+      ]);
       return {
         props: {
-          incomeVerification: incomeVerificationResponse.data || null,
+          balance: balanceResponse.data,
+          identity: identityResponse.data,
+          investments: investmentsResponse.data,
+          transactions: transactionsResponse.data,
+          incomeVerification: incomeVerificationResponse.data,
         },
       };
     } catch (error) {

@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { balance, identity, investments, transactions } = req.body;
+  const { balance, identity, investments, transactions, incomeVerificationData } = req.body;
 
   try {
     const prompt = `
@@ -21,6 +21,7 @@ export default async function handler(req, res) {
       Identity: ${JSON.stringify(identity)}
       Investments: ${JSON.stringify(investments)}
       Transactions: ${JSON.stringify(transactions)}
+      Income Verification: ${JSON.stringify(incomeVerificationData)}
 
       Please provide an analysis of the applicant's financial situation, including:
       1. Income stability
