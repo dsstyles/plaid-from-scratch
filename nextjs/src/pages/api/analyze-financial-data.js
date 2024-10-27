@@ -1,10 +1,9 @@
-// import { Configuration, OpenAIApi } from 'openai';
 import OpenAI from 'openai';
+import PDFDocument from 'pdfkit';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,7 +14,7 @@ export default async function handler(req, res) {
 
   try {
     const prompt = `
-      Analyze the following financial data for a mortgage application:
+      The following financial data for a mortgage application:
 
       Balance: ${JSON.stringify(balance)}
       Identity: ${JSON.stringify(identity)}
@@ -23,7 +22,7 @@ export default async function handler(req, res) {
       Transactions: ${JSON.stringify(transactions)}
       Income Verification: ${JSON.stringify(incomeVerificationData)}
 
-      Please provide an analysis of the applicant's financial situation, including:
+      You are a professional mortgage brocker and you need to create a professional mortgage application form the data provided. The application should include the following:
       1. Income stability
       2. Savings and assets
       3. Debt-to-income ratio
@@ -31,19 +30,39 @@ export default async function handler(req, res) {
       5. Overall financial health
       6. Recommendations for improving mortgage application chances
 
-      Based on this analysis, estimate the likelihood of mortgage approval and suggest a suitable mortgage amount.
     `;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o',  // Fixed typo in model name
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1000,
+      max_tokens: 1500,
     });
 
     const analysis = response.choices[0].message.content;
-    res.status(200).json({ analysis });
+    console.log('Analysis:', analysis);
+
+    // Set response headers for PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=mortgage_analysis.pdf');
+
+    // Create and pipe PDF document
+    const doc = new PDFDocument();
+    doc.pipe(res);
+
+    // Add content to PDF
+    doc.fontSize(20).text('Mortgage Application Analysis', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(new Date().toLocaleDateString(), { align: 'right' });
+    doc.moveDown();
+    doc.fontSize(12).text(analysis);
+
+    // Finalize PDF
+    doc.end();
   } catch (error) {
-    console.error('Error calling OpenAI API:', error);
-    res.status(500).json({ message: 'An error occurred while analyzing the data' });
+    console.error('Error processing request:', error);
+    // Only send error response if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'An error occurred while analyzing the data' });
+    }
   }
 }

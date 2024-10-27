@@ -15,15 +15,23 @@ export default function Dashboard({ balance, identity, investments, transactions
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ balance, identity, investments, transactions, incomeVerificationData }),
+        body: JSON.stringify({ balance, identity, investments, transactions }),
       });
       
       if (!response.ok) {
         throw new Error('Failed to analyze data');
       }
 
-      const result = await response.json();
-      setAnalysis(result.analysis);
+      // Create blob from response and download PDF
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mortgage_analysis.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       console.error('Error analyzing data:', error);
       setAnalysis('An error occurred while analyzing the data.');
