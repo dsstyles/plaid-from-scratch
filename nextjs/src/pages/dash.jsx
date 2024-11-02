@@ -40,22 +40,22 @@ export default function Dashboard({ balance, identity, investments, transactions
     }
   };
 
-  const handleIncomeVerification = async () => {
-    console.log('Initiating income verification');
-    try {
-      const response = await fetch('/api/income-verification', {
-        method: 'POST',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch income verification');
-      }
-      const data = await response.json();
-      console.log('Income verification data received:', data);
-      setIncomeVerificationData(data);
-    } catch (error) {
-      console.error('Error fetching income verification:', error);
-    }
-  };
+  // const handleIncomeVerification = async () => {
+  //   console.log('Initiating income verification');
+  //   try {
+  //     const response = await fetch('/api/income-verification', {
+  //       method: 'POST',
+  //     });
+  //     if (!response.ok) {
+  //       throw new Error('Failed to fetch income verification');
+  //     }
+  //     const data = await response.json();
+  //     console.log('Income verification data received:', data);
+  //     setIncomeVerificationData(data);
+  //   } catch (error) {
+  //     console.error('Error fetching income verification:', error);
+  //   }
+  // };
   
 
   if (error) {
@@ -128,9 +128,6 @@ export default function Dashboard({ balance, identity, investments, transactions
         )}
       </section>
 
-      <button onClick={handleIncomeVerification}>
-        Verify Income
-      </button> 
 
       {incomeVerificationData && incomeVerificationData.paystubs && (
         <section>
@@ -161,7 +158,7 @@ export default function Dashboard({ balance, identity, investments, transactions
 
 
       <button onClick={handleAnalyzeData} disabled={isLoading}>
-        {isLoading ? 'Analyzing...' : 'Analyze Data for Mortgage Application'}
+        {isLoading ? 'Generating...' : 'Generate a Mortgage Application'}
       </button>
 
       {analysis && (

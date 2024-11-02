@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     doc.pipe(res);
 
     // Add content to PDF
-    doc.fontSize(20).text('Mortgage Application Analysis', { align: 'center' });
+    doc.fontSize(20).text('Mortgage Application', { align: 'center' });
     doc.moveDown();
     doc.fontSize(12).text(new Date().toLocaleDateString(), { align: 'right' });
     doc.moveDown();
